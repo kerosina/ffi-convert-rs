@@ -199,6 +199,7 @@
 //! conversion of a C-like struct to a raw pointer to this struct and conversely.
 //!
 //! This conversion trait comes in handy for C-like struct that have fields that points to other structs.
+#![cfg_attr(not(feature = "std"),no_std)]
 
 pub use ffi_convert_derive::*;
 

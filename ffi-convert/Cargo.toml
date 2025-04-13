@@ -11,5 +11,9 @@ keywords = ["ffi"]
 
 [dependencies]
 ffi-convert-derive = { path = "../ffi-convert-derive" }
-thiserror = "2.0.12"
+thiserror = {version = "2.0.12", optional = true, default-features = false}
 libc = "0.2"
+
+[features]
+default = ["std"]
+std = ["thiserror/std"]

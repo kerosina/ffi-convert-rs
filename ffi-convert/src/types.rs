@@ -1,12 +1,28 @@
 //! This module contains definitions of utility types that implement the [`CReprOf`], [`AsRust`], and [`CDrop`] traits.
 //!
+#[cfg(not(feature = "std"))]
+extern crate alloc;
 
 use ffi_convert_derive::RawPointerConverter;
 
-use std::any::TypeId;
-use std::ffi::{CStr, CString};
-use std::ops::Range;
-use std::ptr;
+#[cfg(feature = "std")]
+use std::{
+    any::TypeId,
+    ffi::{CStr, CString},
+    ops::Range,
+    slice,
+    ptr
+};
+
+#[cfg(not(feature = "std"))]
+use {
+    core::any::TypeId,
+    core::ffi::CStr,
+    alloc::ffi::CString,
+    core::ops::Range,
+    alloc::slice,
+    core::ptr
+};
 
 use crate as ffi_convert;
 use crate::conversions::*;
@@ -36,7 +52,7 @@ impl AsRust<Vec<String>> for CStringArray {
         let mut result = vec![];
 
         let strings = unsafe {
-            std::slice::from_raw_parts_mut(self.data as *mut *mut libc::c_char, self.size)
+            slice::from_raw_parts_mut(self.data as *mut *mut libc::c_char, self.size)
         };
 
         for s in strings {
@@ -67,7 +83,7 @@ impl CReprOf<Vec<String>> for CStringArray {
 impl CDrop for CStringArray {
     fn do_drop(&mut self) -> Result<(), CDropError> {
         unsafe {
-            let y = Box::from_raw(std::slice::from_raw_parts_mut(
+            let y = Box::from_raw(slice::from_raw_parts_mut(
                 self.data as *mut *mut libc::c_char,
                 self.size,
             ));
@@ -126,7 +142,7 @@ impl<U: AsRust<V> + 'static, V> AsRust<Vec<V>> for CArray<U> {
 
         if self.size > 0 {
             let values =
-                unsafe { std::slice::from_raw_parts_mut(self.data_ptr as *mut U, self.size) };
+                unsafe { slice::from_raw_parts_mut(self.data_ptr as *mut U, self.size) };
 
             if is_primitive(TypeId::of::<U>()) {
                 unsafe {
@@ -175,7 +191,7 @@ impl<T> CDrop for CArray<T> {
     fn do_drop(&mut self) -> Result<(), CDropError> {
         if !self.data_ptr.is_null() {
             let _ = unsafe {
-                Box::from_raw(std::slice::from_raw_parts_mut(
+                Box::from_raw(slice::from_raw_parts_mut(
                     self.data_ptr as *mut T,
                     self.size,
                 ))

@@ -1,5 +1,24 @@
-use std::ffi::NulError;
-use std::str::Utf8Error;
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(feature = "std")]
+use std {
+    ffi::NulError,
+    ffi::CString,
+    ffi::CStr
+    str::Utf8Error,
+    error::Error as StdError,
+    mem
+};
+#[cfg(not(feature = "std"))]
+use {
+    core::str::Utf8Error,
+    alloc::ffi::NulError,
+    alloc::ffi::CString,
+    core::ffi::CStr,
+    core::error::Error as StdError,
+    core::mem
+};
 
 use thiserror::Error;
 
@@ -78,7 +97,7 @@ pub enum CReprOfError {
     #[error("A string contains a nul bit")]
     StringContainsNullBit(#[from] NulError),
     #[error("An error occurred during conversion to C repr; {}", .0)]
-    Other(#[from] Box<dyn std::error::Error + Send + Sync>),
+    Other(#[from] Box<dyn StdError + Send + Sync>),
 }
 
 /// Trait showing that the struct implementing it is a `repr(C)` compatible view of the parametrized
@@ -92,7 +111,7 @@ pub enum CDropError {
     #[error("unexpected null pointer")]
     NullPointer(#[from] UnexpectedNullPointerError),
     #[error("An error occurred while dropping C struct: {}", .0)]
-    Other(#[from] Box<dyn std::error::Error + Send + Sync>),
+    Other(#[from] Box<dyn StdError + Send + Sync>),
 }
 
 /// Trait showing that the C-like struct implementing it can free up its part of memory that are not
@@ -109,7 +128,7 @@ pub enum AsRustError {
     #[error("could not convert string as it is not UTF-8: {}", .0)]
     Utf8Error(#[from] Utf8Error),
     #[error("An error occurred during conversion to Rust: {}", .0)]
-    Other(#[from] Box<dyn std::error::Error + Send + Sync>),
+    Other(#[from] Box<dyn StdError + Send + Sync>),
 }
 
 /// Trait showing that the struct implementing it is a `repr(C)` compatible view of the parametrized
@@ -230,7 +249,7 @@ impl<T> RawBorrowMut<T> for T {
     }
 }
 
-impl RawPointerConverter<libc::c_void> for std::ffi::CString {
+impl RawPointerConverter<libc::c_void> for CString {
     fn into_raw_pointer(self) -> *const libc::c_void {
         self.into_raw() as _
     }
@@ -251,12 +270,12 @@ impl RawPointerConverter<libc::c_void> for std::ffi::CString {
         if input.is_null() {
             Err(UnexpectedNullPointerError)
         } else {
-            Ok(std::ffi::CString::from_raw(input as *mut libc::c_char))
+            Ok(CString::from_raw(input as *mut libc::c_char))
         }
     }
 }
 
-impl RawPointerConverter<libc::c_char> for std::ffi::CString {
+impl RawPointerConverter<libc::c_char> for CString {
     fn into_raw_pointer(self) -> *const libc::c_char {
         self.into_raw() as _
     }
@@ -277,12 +296,12 @@ impl RawPointerConverter<libc::c_char> for std::ffi::CString {
         if input.is_null() {
             Err(UnexpectedNullPointerError)
         } else {
-            Ok(std::ffi::CString::from_raw(input as *mut libc::c_char))
+            Ok(CString::from_raw(input as *mut libc::c_char))
         }
     }
 }
 
-impl RawBorrow<libc::c_char> for std::ffi::CStr {
+impl RawBorrow<libc::c_char> for CStr {
     unsafe fn raw_borrow<'a>(
         input: *const libc::c_char,
     ) -> Result<&'a Self, UnexpectedNullPointerError> {
@@ -306,7 +325,7 @@ impl_c_drop_for!(u64);
 impl_c_drop_for!(f32);
 impl_c_drop_for!(f64);
 impl_c_drop_for!(bool);
-impl_c_drop_for!(std::ffi::CString);
+impl_c_drop_for!(CString);
 
 impl_c_repr_of_for!(usize);
 impl_c_repr_of_for!(i8);
@@ -323,9 +342,9 @@ impl_c_repr_of_for!(bool);
 
 impl_c_repr_of_for!(usize, i32);
 
-impl CReprOf<String> for std::ffi::CString {
+impl CReprOf<String> for CString {
     fn c_repr_of(input: String) -> Result<Self, CReprOfError> {
-        Ok(std::ffi::CString::new(input)?)
+        Ok(CString::new(input)?)
     }
 }
 
@@ -344,7 +363,7 @@ impl_as_rust_for!(bool);
 
 impl_as_rust_for!(i32, usize);
 
-impl AsRust<String> for std::ffi::CStr {
+impl AsRust<String> for CStr {
     fn as_rust(&self) -> Result<String, AsRustError> {
         self.to_str().map(|s| s.to_owned()).map_err(|e| e.into())
     }
@@ -376,7 +395,7 @@ where
 
         assert_eq!(vec.len(), N);
 
-        let mut result: [T; N] = unsafe { std::mem::zeroed() }; // we'll replace everything so "should" be good
+        let mut result: [T; N] = unsafe { mem::zeroed() }; // we'll replace everything so "should" be good
 
         for (i, t) in vec.into_iter().enumerate() {
             result[i] = t;
@@ -405,7 +424,7 @@ impl<U: AsRust<T>, T, const N: usize> AsRust<[T; N]> for [U; N] {
 
         assert_eq!(vec.len(), N);
 
-        let mut result: [T; N] = unsafe { std::mem::zeroed() }; // we'll replace everything so "should" be good
+        let mut result: [T; N] = unsafe { mem::zeroed() }; // we'll replace everything so "should" be good
 
         for (i, t) in vec.into_iter().enumerate() {
             result[i] = t;
