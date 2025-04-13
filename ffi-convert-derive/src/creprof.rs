@@ -20,7 +20,7 @@ pub fn impl_creprof_macro(input: &syn::DeriveInput) -> TokenStream {
             } = field;
 
             let mut conversion = if field.is_string {
-                quote!(std::ffi::CString::c_repr_of(field)?)
+                quote!(core::ffi::CString::c_repr_of(field)?)
             } else {
                 match field_type {
                     TypeArrayOrTypePath::TypeArray(type_array) => {
@@ -43,7 +43,7 @@ pub fn impl_creprof_macro(input: &syn::DeriveInput) -> TokenStream {
                     #field_name: if let Some(field) = input.#target_field_name {
                         #conversion
                     } else {
-                        std::ptr::null() as _
+                        core::ptr::null() as _
                     }
                 )
             } else {

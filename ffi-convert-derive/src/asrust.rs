@@ -31,7 +31,7 @@ pub fn impl_asrust_macro(input: &syn::DeriveInput) -> TokenStream {
             let mut conversion = if field.is_string {
                 quote!( {
                     use ffi_convert::RawBorrow;
-                    unsafe { std::ffi::CStr::raw_borrow(self.#field_name) }?.as_rust()?
+                    unsafe { core::ffi::CStr::raw_borrow(self.#field_name) }?.as_rust()?
                 })
             } else if field.is_pointer {
                 match field_type {

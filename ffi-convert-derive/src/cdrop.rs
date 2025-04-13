@@ -20,7 +20,7 @@ pub fn impl_cdrop_macro(input: &syn::DeriveInput) -> TokenStream {
             let drop_field = if field.is_string {
                 quote!({
                     use ffi_convert::RawPointerConverter;
-                    unsafe { std::ffi::CString::drop_raw_pointer(self.#field_name) }?
+                    unsafe { core::ffi::CString::drop_raw_pointer(self.#field_name) }?
                 })
             } else if field.is_pointer {
                 match field_type {
